@@ -46,3 +46,5 @@ npm run dev
 - Phase 2: real flow data, Daily Big Money Picks, websockets, AI trade
   assistant grounded in the Options Trading QuickStart Guide, auth/multi-user
   (Postgres + Prisma).
+
+ Update: triggering clean rebuild.
