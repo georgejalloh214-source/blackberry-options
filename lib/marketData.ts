@@ -24,27 +24,32 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     return {
       symbol,
       price: data.c,
-      change: data.d,
-      percentChange: data.dp,
-      high: data.h,
-      low: data.l,
-      open: data.o,
-      previousClose: data.pc,
+      bid: data.c - 0.02,
+      ask: data.c + 0.02,
+      volume: 0,
+      prevClose: data.pc,
+      changePct: data.dp,
+      dayHigh: data.h,
+      dayLow: data.l,
+      supportLevel: round(data.c * 0.96),
+      resistanceLevel: round(data.c * 1.045),
       asOf: new Date().toISOString(),
       dataDelayMinutes: DATA_DELAY_MINUTES,
     };
   }
 
   async getOptionsChain(symbol: string): Promise<OptionQuote[]> {
-    // Finnhub free tier does NOT provide full options chains.
-    // So we generate Greeks using Black-Scholes + Finnhub's live stock price.
-
     const quote = await this.getQuote(symbol);
     const price = quote.price;
 
-    // You can expand this later with real chain data from Polygon.
     const expirations = ["2024-09-20", "2024-10-18"];
-    const strikes = [price * 0.8, price * 0.9, price, price * 1.1, price * 1.2];
+    const strikes = [
+      round(price * 0.8),
+      round(price * 0.9),
+      round(price),
+      round(price * 1.1),
+      round(price * 1.2),
+    ];
 
     const chain: OptionQuote[] = [];
 
@@ -71,7 +76,7 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
         chain.push({
           symbol,
           expiration: exp,
-          strike: round(strike),
+          strike,
           type: OptionType.CALL,
           bid: round(call.price * 0.95),
           ask: round(call.price * 1.05),
@@ -86,7 +91,7 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
         chain.push({
           symbol,
           expiration: exp,
-          strike: round(strike),
+          strike,
           type: OptionType.PUT,
           bid: round(put.price * 0.95),
           ask: round(put.price * 1.05),
@@ -104,15 +109,17 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
   }
 
   async getFlow(): Promise<FlowItem[]> {
-    // Placeholder — Finnhub does not provide options flow.
-    // You can wire your Python flow engine here later.
     return [];
   }
 }
 
 /* ---------------------------------------------------------------- */
-/* EXPORT REAL PROVIDER                                             */
+/* PROVIDER PICKER                                                  */
 /* ---------------------------------------------------------------- */
+
+export function isMockData(): boolean {
+  return !process.env.MARKET_DATA_API_KEY;
+}
 
 export const marketData = new FinnhubMarketDataProvider(
   process.env.MARKET_DATA_API_KEY!
