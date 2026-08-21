@@ -1,21 +1,15 @@
 import { PaperPosition } from "@/types";
 
 /**
- * Paper trading storage.
- *
- * Production: Vercel KV / Upstash Redis via REST (KV_REST_API_URL +
- * KV_REST_API_TOKEN) — serverless instances are stateless, so in-memory
- * storage would silently lose positions on Vercel.
- *
- * Local dev fallback: a globalThis-pinned map (survives hot reloads in
- * `next dev`, which is all local dev needs).
+ * KV storage. Production: Upstash/Vercel KV via REST. Local dev: globalThis map.
+ * Generic kvGetJson/kvSetJson serve account config, alerts, auto-exit state.
  */
 
-const KV_KEY = "bbo:paper-positions";
+const POSITIONS_KEY = "bbo:paper-positions";
 
 interface KvClient {
-  get(): Promise<PaperPosition[]>;
-  set(positions: PaperPosition[]): Promise<void>;
+  getRaw(key: string): Promise<string | null>;
+  setRaw(key: string, value: string): Promise<void>;
 }
 
 class UpstashKv implements KvClient {
@@ -39,29 +33,26 @@ class UpstashKv implements KvClient {
     return json.result;
   }
 
-  async get(): Promise<PaperPosition[]> {
-    const raw = (await this.cmd(["GET", KV_KEY])) as string | null;
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw) as PaperPosition[];
-    } catch {
-      return [];
-    }
+  async getRaw(key: string): Promise<string | null> {
+    return (await this.cmd(["GET", key])) as string | null;
   }
-
-  async set(positions: PaperPosition[]): Promise<void> {
-    await this.cmd(["SET", KV_KEY, JSON.stringify(positions)]);
+  async setRaw(key: string, value: string): Promise<void> {
+    await this.cmd(["SET", key, value]);
   }
 }
 
-const globalStore = globalThis as unknown as { __bboPositions?: PaperPosition[] };
+const globalStore = globalThis as unknown as { __bboKv?: Map<string, string> };
 
 class MemoryKv implements KvClient {
-  async get(): Promise<PaperPosition[]> {
-    return globalStore.__bboPositions ?? [];
+  private map(): Map<string, string> {
+    if (!globalStore.__bboKv) globalStore.__bboKv = new Map();
+    return globalStore.__bboKv;
   }
-  async set(positions: PaperPosition[]): Promise<void> {
-    globalStore.__bboPositions = positions;
+  async getRaw(key: string): Promise<string | null> {
+    return this.map().get(key) ?? null;
+  }
+  async setRaw(key: string, value: string): Promise<void> {
+    this.map().set(key, value);
   }
 }
 
@@ -72,10 +63,24 @@ function client(): KvClient {
   return new MemoryKv();
 }
 
+export async function kvGetJson<T>(key: string, fallback: T): Promise<T> {
+  try {
+    const raw = await client().getRaw(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function kvSetJson<T>(key: string, value: T): Promise<void> {
+  await client().setRaw(key, JSON.stringify(value));
+}
+
 export async function loadPositions(): Promise<PaperPosition[]> {
-  return client().get();
+  return kvGetJson<PaperPosition[]>(POSITIONS_KEY, []);
 }
 
 export async function savePositions(positions: PaperPosition[]): Promise<void> {
-  return client().set(positions);
+  return kvSetJson(POSITIONS_KEY, positions);
 }

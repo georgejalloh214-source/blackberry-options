@@ -7,6 +7,7 @@ import { FlowHistory } from "@/components/FlowHistory";
 import { FlowTape } from "@/components/FlowTape";
 import { Header } from "@/components/header";
 import { PriceCard } from "@/components/price-card";
+import { RealtimeQuoteCard } from "@/components/RealtimeQuoteCard";
 import { SentimentSummary } from "@/components/SentimentSummary";
 import { ApiEnvelope, StockQuote } from "@/types";
 import { useParams } from "next/navigation";
@@ -34,6 +35,7 @@ export default function SymbolPage() {
       <Header asOf={asOf} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6">
+          <RealtimeQuoteCard symbol={symbol} />
           <PriceCard quote={quote} loading={!quote} />
           <SentimentSummary symbol={symbol} />
           <AlertsPanel defaultSymbol={symbol} />
