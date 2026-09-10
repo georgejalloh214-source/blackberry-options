@@ -85,6 +85,7 @@ export async function runAutoExitSweep(): Promise<AutoExitEvent[]> {
 
     if (reason) {
       const closed = await closeTrade(p.id);
+      const riskLevel = Math.max(0, Math.min(100, 100 - p.assignmentRiskScore));
       fired.push({
         id: crypto.randomUUID(),
         positionId: p.id,
@@ -94,6 +95,9 @@ export async function runAutoExitSweep(): Promise<AutoExitEvent[]> {
         detail,
         pnl: closed.realizedPnl ?? 0,
         at: new Date().toISOString(),
+        pnlPct: Number(pnlPctOfMax.toFixed(2)),
+        riskLevel,
+        source: "AUTO_EXIT",
       });
     }
   }

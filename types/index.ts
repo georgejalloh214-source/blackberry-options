@@ -6,6 +6,9 @@ export interface OptionContractRef {
   type: OptionType;
 }
 
+export type OptionContract = OptionContractRef;
+export type StrategyMetadata = Record<string, unknown>;
+
 export interface Greeks {
   delta: number;
   gamma: number;
@@ -118,6 +121,7 @@ export interface PaperPosition {
   quantity: number;
   side: PositionSide;
   strategy: string;
+  strategyMetadata?: StrategyMetadata;
   entryPrice: number;
   currentPrice: number;
   pnl: number;

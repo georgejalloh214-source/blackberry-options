@@ -126,6 +126,11 @@ export function AutoExitToggle({ onTradeClosed }: { onTradeClosed?: () => void }
                     {e.reason.replace(/_/g, " ")}
                   </Badge>
                   {e.contract} — {e.detail}
+                  {typeof e.pnlPct === "number" && (
+                    <span className="ml-2 text-muted-foreground">
+                      ({e.pnlPct.toFixed(1)}% P/L · risk {e.riskLevel ?? "-"})
+                    </span>
+                  )}
                 </span>
                 <span className={`font-bold tabular ${e.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   ${e.pnl.toFixed(0)}
@@ -134,6 +139,14 @@ export function AutoExitToggle({ onTradeClosed }: { onTradeClosed?: () => void }
             ))}
           </div>
         )}
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-[11px] text-muted-foreground">
+          <div className="mb-1 flex items-center gap-2 font-semibold text-primary">Bot reasoning</div>
+          {events[0] ? (
+            <p>Latest decision: {events[0].reason.replace(/_/g, " ").toLowerCase()} — {events[0].detail}</p>
+          ) : (
+            <p>No exit has fired yet. The bot watches profit target, stop loss, delta, DTE, and RiskManager rules while armed.</p>
+          )}
+        </div>
         <p className="text-[10px] text-muted-foreground/70">
           Sweeps run every 30s while armed (browser open). Point a Vercel Cron at POST /api/auto-exit for always-on.
         </p>

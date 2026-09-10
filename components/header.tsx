@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { TickerSearch } from "@/components/TickerSearch";
 import { Clock } from "lucide-react";
 
 export function Header({ asOf }: { asOf: string | null }) {
@@ -27,10 +28,20 @@ export function Header({ asOf }: { asOf: string | null }) {
           <a href="/symbol/AAPL" className="text-muted-foreground hover:text-primary">
             Symbol View
           </a>
+          <a href="/analytics" className="text-muted-foreground hover:text-primary">
+            Analytics
+          </a>
+          <a href="/overview" className="text-muted-foreground hover:text-primary">
+            Market Overview
+          </a>
+          <a href="/settings" className="text-muted-foreground hover:text-primary">
+            Settings
+          </a>
         </nav>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <TickerSearch />
         <Badge variant="outline" className="border-primary/40 text-primary gap-1">
           <Clock className="h-3 w-3" />
           Delayed 15 min
