@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertsPanel } from "@/components/AlertsPanel";
+import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
 import { DarkPoolTape } from "@/components/DarkPoolTape";
 import { Disclaimer } from "@/components/disclaimer";
 import { FlowHistory } from "@/components/FlowHistory";
@@ -45,6 +46,7 @@ export default function SymbolPage() {
           <DarkPoolTape symbol={symbol} />
         </div>
       </div>
+      <AIAnalysisPanel symbol={symbol} />
       <FlowHistory symbol={symbol} />
       <Disclaimer />
     </div>
