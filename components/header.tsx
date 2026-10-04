@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { TickerSearch } from "@/components/TickerSearch";
 import { Clock } from "lucide-react";
+import Link from "next/link";
 
 export function Header({ asOf }: { asOf: string | null }) {
   return (
@@ -19,24 +20,24 @@ export function Header({ asOf }: { asOf: string | null }) {
 
         {/* ⭐ Added Navigation Links */}
         <nav className="mt-2 flex gap-4 text-xs">
-          <a href="/" className="text-muted-foreground hover:text-primary">
+          <Link href="/" className="text-muted-foreground hover:text-primary">
             Dashboard
-          </a>
-          <a href="/paper-trading" className="text-muted-foreground hover:text-primary">
+          </Link>
+          <Link href="/paper-trading" className="text-muted-foreground hover:text-primary">
             Paper Trading
-          </a>
-          <a href="/symbol/AAPL" className="text-muted-foreground hover:text-primary">
+          </Link>
+          <Link href="/symbol/AAPL" className="text-muted-foreground hover:text-primary">
             Symbol View
-          </a>
-          <a href="/analytics" className="text-muted-foreground hover:text-primary">
+          </Link>
+          <Link href="/analytics" className="text-muted-foreground hover:text-primary">
             Analytics
-          </a>
-          <a href="/overview" className="text-muted-foreground hover:text-primary">
+          </Link>
+          <Link href="/overview" className="text-muted-foreground hover:text-primary">
             Market Overview
-          </a>
-          <a href="/settings" className="text-muted-foreground hover:text-primary">
+          </Link>
+          <Link href="/settings" className="text-muted-foreground hover:text-primary">
             Settings
-          </a>
+          </Link>
         </nav>
       </div>
 
