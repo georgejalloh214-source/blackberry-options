@@ -5,7 +5,7 @@ export function Disclaimer() {
     <footer className="mt-8 border-t border-border pt-4 pb-8">
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground tracking-wide">
         <Info className="h-3.5 w-3.5 text-primary" />
-        Decision support only — not financial advice.
+        Decision support only — not financial advice. Data delayed 15 min. For educational use only.
       </p>
     </footer>
   );

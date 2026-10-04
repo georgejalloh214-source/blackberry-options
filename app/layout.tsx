@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
+import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -22,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={montserrat.variable}>
       <body className={`${montserrat.className} min-h-screen antialiased`}>
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

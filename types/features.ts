@@ -83,7 +83,8 @@ export type AutoExitReason =
   | "STOP_LOSS"
   | "DELTA_RISK"
   | "EXPIRATION"
-  | "RISK_MANAGER";
+  | "RISK_MANAGER"
+  | "RISK_ENVIRONMENT";
 
 export interface AutoExitEvent {
   id: string;
@@ -94,6 +95,9 @@ export interface AutoExitEvent {
   detail: string;
   pnl: number;
   at: string;
+  pnlPct?: number;
+  riskLevel?: number;
+  source?: "AUTO_EXIT";
 }
 
 /* ---------- Flow ---------- */

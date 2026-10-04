@@ -1,7 +1,7 @@
 import { round } from "@/lib/blackScholes";
 import { getProvider } from "@/lib/marketData";
 import { loadPositions, savePositions } from "@/lib/store";
-import { OptionContractRef, PaperPosition, PositionSide } from "@/types";
+import { OptionContract, OptionContractRef, PaperPosition, PositionSide, StrategyMetadata } from "@/types";
 
 export interface OpenTradeInput {
   symbol: string;
@@ -10,6 +10,23 @@ export interface OpenTradeInput {
   side: PositionSide;
   strategy: string;
   notes?: string;
+  metadata?: StrategyMetadata;
+}
+
+export interface MultiLegTradeInput {
+  symbol: string;
+  strategy: string;
+  legs: OpenTradeInput[];
+  metadata?: StrategyMetadata;
+}
+
+export async function openMultiLegTrade(input: MultiLegTradeInput): Promise<PaperPosition[]> {
+  if (input.legs.length < 2) throw new Error("A multi-leg trade requires at least two legs.");
+  const positions: PaperPosition[] = [];
+  for (const leg of input.legs) {
+    positions.push(await openTrade({ ...leg, symbol: input.symbol, strategy: input.strategy, metadata: input.metadata }));
+  }
+  return positions;
 }
 
 export async function openTrade(input: OpenTradeInput): Promise<PaperPosition> {
@@ -36,10 +53,11 @@ export async function openTrade(input: OpenTradeInput): Promise<PaperPosition> {
   const position: PaperPosition = {
     id: crypto.randomUUID(),
     symbol: input.symbol.toUpperCase(),
-    optionContract: input.optionContract,
+    optionContract: input.optionContract as OptionContract,
     quantity: input.quantity,
     side: input.side,
     strategy: input.strategy,
+    strategyMetadata: input.metadata,
     entryPrice,
     currentPrice: entryPrice,
     pnl: 0,
