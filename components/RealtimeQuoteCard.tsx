@@ -16,7 +16,7 @@ interface RealtimeQuote {
   low: number;
   open: number;
   prevClose: number;
-  source: "FINNHUB" | "SAMPLE";
+  source: "FINNHUB" | "YAHOO" | "SAMPLE";
 }
 
 export function RealtimeQuoteCard({ symbol }: { symbol: string }) {
@@ -60,10 +60,10 @@ export function RealtimeQuoteCard({ symbol }: { symbol: string }) {
           <Badge
             variant="secondary"
             className={`text-[9px] ${
-              quote?.source === "FINNHUB" ? "bg-emerald-500/20 text-emerald-400" : ""
+              quote && quote.source !== "SAMPLE" ? "bg-emerald-500/20 text-emerald-400" : ""
             }`}
           >
-            {quote?.source === "FINNHUB" ? "FINNHUB LIVE" : "SAMPLE"}
+            {quote?.source === "FINNHUB" ? "FINNHUB LIVE" : quote?.source === "YAHOO" ? "YAHOO · DELAYED" : "SAMPLE"}
           </Badge>
         </CardTitle>
       </CardHeader>

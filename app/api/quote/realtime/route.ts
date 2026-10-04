@@ -1,6 +1,6 @@
 import { fail, ok } from "@/lib/api";
 import { fetchFinnhubQuote, finnhubKey } from "@/lib/finnhub";
-import { getProvider } from "@/lib/marketData";
+import { fetchYahooQuote, getProvider } from "@/lib/marketData";
 import { round } from "@/lib/blackScholes";
 
 export interface RealtimeQuote {
@@ -12,7 +12,7 @@ export interface RealtimeQuote {
   low: number;
   open: number;
   prevClose: number;
-  source: "FINNHUB" | "SAMPLE";
+  source: "FINNHUB" | "YAHOO" | "SAMPLE";
 }
 
 export async function GET(request: Request) {
@@ -38,7 +38,22 @@ export async function GET(request: Request) {
         return ok(data, 0); // Finnhub REST quotes are near-real-time
       }
     }
-    // Fallback: sample provider quote
+    const y = await fetchYahooQuote(symbol);
+    if (y) {
+      const data: RealtimeQuote = {
+        symbol,
+        price: y.price,
+        change: round(y.price - y.prevClose),
+        changePct: y.changePct,
+        high: y.dayHigh,
+        low: y.dayLow,
+        open: y.prevClose,
+        prevClose: y.prevClose,
+        source: "YAHOO",
+      };
+      return ok(data);
+    }
+    // Last resort: sample provider quote
     const s = await getProvider().getQuote(symbol);
     const data: RealtimeQuote = {
       symbol,

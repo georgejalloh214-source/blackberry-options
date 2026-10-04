@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertsPanel } from "@/components/AlertsPanel";
+import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
 import { BotIntelligence } from "@/components/BotIntelligence";
 import { computeBotInputs } from "@/lib/bot/computeInputs";
 import { DarkPoolTape } from "@/components/DarkPoolTape";
@@ -113,6 +114,7 @@ export default function SymbolPage() {
           <DarkPoolTape symbol={symbol} />
         </div>
       </div>
+      <AIAnalysisPanel symbol={symbol} />
       <section className="space-y-3">
         <SectionHeader title="Market Structure" detail="Chain and historical flow" />
         <OptionsChain symbol={symbol} />

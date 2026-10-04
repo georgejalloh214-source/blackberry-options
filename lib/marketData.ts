@@ -1,3 +1,4 @@
+import YahooFinance from "yahoo-finance2";
 import { blackScholes, round } from "@/lib/blackScholes";
 import { fetchFinnhubQuote, finnhubKey } from "@/lib/finnhub";
 import { rngFor } from "@/lib/flow/seeded";
@@ -231,12 +232,68 @@ class FinnhubProvider implements MarketDataProvider {
   }
 }
 
+/* ------------------------------ YAHOO ----------------------------- */
+
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey", "ripHistorical"] });
+const QUOTE_TTL_MS = 15_000; // pages poll every 10s across several widgets
+const quoteCache = new Map<string, { at: number; quote: StockQuote }>();
+
+/** Live (delayed) Yahoo quote, cached briefly; null when Yahoo has no usable price. */
+export async function fetchYahooQuote(symbolRaw: string): Promise<StockQuote | null> {
+  const symbol = symbolRaw.toUpperCase();
+  const cached = quoteCache.get(symbol);
+  if (cached && Date.now() - cached.at < QUOTE_TTL_MS) return cached.quote;
+
+  try {
+    const q = await yahooFinance.quote(symbol);
+    if (typeof q.regularMarketPrice !== "number" || q.regularMarketPrice <= 0) return null;
+    const price = round(q.regularMarketPrice);
+    const step = strikeStep(price);
+    const quote: StockQuote = {
+      symbol,
+      price,
+      bid: round(q.bid && q.bid > 0 ? q.bid : price - 0.02),
+      ask: round(q.ask && q.ask > 0 ? q.ask : price + 0.02),
+      volume: q.regularMarketVolume ?? 0,
+      prevClose: round(q.regularMarketPreviousClose ?? price),
+      changePct: round(q.regularMarketChangePercent ?? 0),
+      dayHigh: round(q.regularMarketDayHigh ?? price),
+      dayLow: round(q.regularMarketDayLow ?? price),
+      supportLevel: round(Math.floor((price * 0.96) / step) * step),
+      resistanceLevel: round(Math.ceil((price * 1.045) / step) * step),
+    };
+    quoteCache.set(symbol, { at: Date.now(), quote });
+    return quote;
+  } catch {
+    return null; // Yahoo down / unknown symbol — callers fall back
+  }
+}
+
+/** Live (delayed) Yahoo quotes. Chain is MODELED around the real spot; flow stays sample. */
+class YahooProvider implements MarketDataProvider {
+  private fallback: MarketDataProvider = finnhubKey() ? new FinnhubProvider() : new SampleProvider();
+
+  async getQuote(symbolRaw: string): Promise<StockQuote> {
+    const symbol = symbolRaw.toUpperCase();
+    return (await fetchYahooQuote(symbol)) ?? this.fallback.getQuote(symbol);
+  }
+
+  async getOptionsChain(symbolRaw: string): Promise<OptionQuote[]> {
+    const symbol = symbolRaw.toUpperCase();
+    return buildChain(symbol, await this.getQuote(symbol));
+  }
+
+  async getFlow(symbol?: string): Promise<FlowItem[]> {
+    return buildFlow((s) => this.getQuote(s), symbol);
+  }
+}
+
 /* --------------------------- PROVIDER PICK ------------------------ */
 
 export function isMockData(): boolean {
-  return !finnhubKey();
+  return false; // quotes are live via Yahoo; chain and flow are still modeled/sample
 }
 
 export function getProvider(): MarketDataProvider {
-  return finnhubKey() ? new FinnhubProvider() : new SampleProvider();
+  return new YahooProvider();
 }
