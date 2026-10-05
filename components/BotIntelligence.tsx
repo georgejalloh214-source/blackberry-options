@@ -53,7 +53,7 @@ export function BotIntelligence({ inputs }: { inputs: BotOutput["inputs"] }) {
         {!result ? <p className="text-xs text-muted-foreground">Reading trend, flow, IV, Greeks, and risk...</p> : (
           <div className="space-y-4">
             <div className="flex items-end gap-3">
-              <span className="text-4xl font-bold tabular text-emerald-400">{result.tradeScore}</span>
+              <span className="text-4xl font-bold tabular text-amber-300/70">{result.tradeScore}</span>
               <span className="pb-1 text-sm text-muted-foreground">/ 100 · {qualityLabel[result.quality]}</span>
             </div>
             <div className="grid gap-2 sm:grid-cols-5">
@@ -68,8 +68,12 @@ export function BotIntelligence({ inputs }: { inputs: BotOutput["inputs"] }) {
               <ShieldCheck className="h-4 w-4 text-primary" />
               <span>Suggested path: <strong className="text-primary">{result.recommendedStrategy}</strong></span>
             </div>
-            <p className={`inline-flex rounded px-2 py-1 text-[10px] font-semibold ${qualityClass[result.quality]}`}>
-              {result.quality === "bad" ? "Skip or reduce risk" : "Review the chain before placing a paper trade"}
+            <p className="inline-flex rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">
+              ⚠ SAMPLE SIGNAL
+            </p>
+            <p className="text-[10px] text-amber-200/80">This signal uses simulated market-flow data and should not be treated as trading evidence.</p>
+            <p className={`inline-flex rounded px-2 py-1 text-[10px] font-semibold opacity-70 ${qualityClass[result.quality]}`}>
+              {result.quality === "bad" ? "Skip or reduce risk" : "Review before paper trading"}
             </p>
           </div>
         )}

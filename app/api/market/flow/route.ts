@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const symbol = searchParams.get("symbol")?.trim().toUpperCase() || undefined;
   try {
     const flow = await getProvider().getFlow(symbol);
-    return ok({ flow, source: process.env.FLOW_DATA_API_KEY ? "LIVE" : "MOCK" });
+    return ok({ flow, source: "SAMPLE" as const });
   } catch (e) {
     return fail("FLOW_ERROR", e instanceof Error ? e.message : "Flow fetch failed", 500);
   }

@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { TickerSearch } from "@/components/TickerSearch";
-import { Clock } from "lucide-react";
+import { Activity } from "lucide-react";
 import Link from "next/link";
 
 export function Header({ asOf }: { asOf: string | null }) {
@@ -19,7 +19,7 @@ export function Header({ asOf }: { asOf: string | null }) {
         </p>
 
         {/* ⭐ Added Navigation Links */}
-        <nav className="mt-2 flex gap-4 text-xs">
+        <nav className="mt-2 hidden max-w-full flex-wrap gap-x-4 gap-y-1 text-xs sm:flex">
           <Link href="/" className="text-muted-foreground hover:text-primary">
             Dashboard
           </Link>
@@ -43,9 +43,9 @@ export function Header({ asOf }: { asOf: string | null }) {
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <TickerSearch />
-        <Badge variant="outline" className="border-primary/40 text-primary gap-1">
-          <Clock className="h-3 w-3" />
-          Delayed 15 min
+        <Badge variant="outline" className="max-w-full border-primary/40 text-primary gap-1">
+          <Activity className="h-3 w-3 shrink-0" />
+          Market data status
         </Badge>
 
         {asOf && (

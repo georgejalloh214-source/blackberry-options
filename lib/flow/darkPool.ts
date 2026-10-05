@@ -14,7 +14,7 @@ export async function getDarkPoolPrints(symbolRaw: string, buckets = 12): Promis
 
   for (let b = 0; b < buckets; b++) {
     const t = new Date(now - b * 300_000);
-    const key = `${symbol}:${t.toISOString().slice(0, 15)}`; // 5-min-ish bucket
+    const key = `${symbol}:${t.toISOString().slice(0, 16)}`;
     const rnd = rngFor(`dark:${key}`);
     const count = Math.floor(rnd() * 3);
     for (let i = 0; i < count; i++) {

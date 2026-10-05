@@ -42,7 +42,7 @@ export function FlowTape({ symbol }: { symbol?: string }) {
   return (
     <Card className="card-3d">
       <CardHeader className="pb-3 space-y-3">
-        <CardTitle className="headline text-sm flex items-center gap-2">
+        <CardTitle className="headline flex flex-wrap items-center gap-2 text-sm">
           <Radio className="h-4 w-4 text-primary animate-pulse" />
           Options Flow Tape {symbol ? `· ${symbol}` : ""}
           {isSample && <Badge variant="secondary" className="text-[10px]">SAMPLE DATA</Badge>}
@@ -89,6 +89,7 @@ export function FlowTape({ symbol }: { symbol?: string }) {
             </div>
           </div>
         ))}
+        {isSample && <p className="border-t border-border/60 pt-2 text-[10px] text-amber-300">Simulated examples only. Yahoo Finance does not provide trade-level options flow; these prints are not trading evidence.</p>}
       </CardContent>
     </Card>
   );

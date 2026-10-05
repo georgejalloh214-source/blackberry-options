@@ -3,6 +3,7 @@
 import { AutoExitToggle } from "@/components/AutoExitToggle";
 import { AutoEntryToggle } from "@/components/AutoEntryToggle";
 import { Disclaimer } from "@/components/disclaimer";
+import { DataSourcePanel } from "@/components/DataSourcePanel";
 import { Header } from "@/components/header";
 import { PaperAccount } from "@/components/PaperAccount";
 import { PaperTradingPanel } from "@/components/paper-trading-panel";
@@ -51,6 +52,7 @@ export default function PaperTradingPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <Header asOf={null} />
+      <DataSourcePanel symbol={symbol} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-primary">Paper desk</p>
