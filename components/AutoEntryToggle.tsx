@@ -6,18 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiEnvelope } from "@/types";
 import { EntryTimingResult } from "@/types";
 import { MultiLegOption } from "@/components/MultiLegBuilder";
+import { ApiStatus } from "@/lib/useApiData";
 import { AlertTriangle, BrainCircuit, Check, CirclePlay, CircleStop } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export function AutoEntryToggle({ symbol, options }: { symbol: string; options: MultiLegOption[] }) {
+export function AutoEntryToggle({ symbol, options, chainStatus }: { symbol: string; options: MultiLegOption[]; chainStatus: ApiStatus }) {
   const [enabled, setEnabled] = useState(false);
-  const [result, setResult] = useState<EntryTimingResult | null>(null);
+  const [scan, setScan] = useState<{ key: string; result: EntryTimingResult | null; error: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const contract = useMemo(() => {
     const option = options[Math.floor(options.length / 2)];
     return option ? { expiry: String(option.expiration), strike: option.strike, type: option.type as "PUT" | "CALL" } : null;
   }, [options]);
+
+  // Scan results belong to one contract; never show them against another.
+  const contractKey = contract ? `${symbol}|${contract.expiry}|${contract.strike}|${contract.type}` : "";
+  const current = scan?.key === contractKey ? scan : null;
+  const result = current?.result ?? null;
+  const targetText = contract
+    ? `${symbol} $${contract.strike} ${contract.type} ${contract.expiry}`
+    : chainStatus === "loading" ? "Loading Yahoo options…"
+    : chainStatus === "idle" ? "Enter a ticker"
+    : "DATA UNAVAILABLE";
 
   const criteria = result ? [
     { label: "Trend", ok: result.reasons.some((reason) => reason.includes("MarketTrend:") && reason.includes("supportive")) },
@@ -26,8 +37,9 @@ export function AutoEntryToggle({ symbol, options }: { symbol: string; options: 
     { label: "Risk filter", ok: result.reasons.some((reason) => reason.includes("RiskManager:") && !reason.includes("unverified")) },
   ] : [];
 
-  const scan = async () => {
+  const runScan = async () => {
     if (!contract) return;
+    const key = contractKey;
     setLoading(true);
     try {
       const response = await fetch("/api/entry-timing", {
@@ -36,7 +48,9 @@ export function AutoEntryToggle({ symbol, options }: { symbol: string; options: 
         body: JSON.stringify({ symbol, optionContract: contract }),
       });
       const payload = (await response.json()) as ApiEnvelope<EntryTimingResult>;
-      if (payload.ok && payload.data) setResult(payload.data);
+      setScan({ key, result: payload.ok && payload.data ? payload.data : null, error: !(payload.ok && payload.data) });
+    } catch {
+      setScan({ key, result: null, error: true });
     } finally {
       setLoading(false);
     }
@@ -61,11 +75,12 @@ export function AutoEntryToggle({ symbol, options }: { symbol: string; options: 
       <CardContent className="space-y-3">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-1 rounded-lg bg-muted/30 p-3 text-xs">
           <span className="text-muted-foreground">Current Target</span>
-          <span className="max-w-full break-words text-right font-semibold">{contract ? `${symbol} $${contract.strike} ${contract.type} ${contract.expiry}` : "Waiting for chain"}</span>
+          <span className={`max-w-full break-words text-right font-semibold ${!contract && chainStatus === "unavailable" ? "text-red-400" : ""}`}>{targetText}</span>
         </div>
-        <Button size="sm" variant="outline" className="h-8 w-full text-xs" disabled={!contract || loading} onClick={scan}>
-          {loading ? "Scanning signals..." : "Scan entry timing"}
+        <Button size="sm" variant="outline" className="h-8 w-full text-xs" disabled={!contract || loading} onClick={runScan}>
+          {loading ? "Scanning signals..." : "Scan Entry Timing"}
         </Button>
+        {current?.error && <p role="alert" className="text-xs text-red-400">Entry timing is unavailable right now.</p>}
         {result && (
           <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3 text-xs">
             <div className="flex items-center justify-between"><span className="font-semibold">{result.signal.replace(/_/g, " ")}</span><Badge variant="outline" className="text-[9px]">{result.botStatus}</Badge></div>

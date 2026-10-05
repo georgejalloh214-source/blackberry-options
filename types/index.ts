@@ -151,3 +151,9 @@ export interface ApiEnvelope<T> {
   asOf: string;
   dataDelayMinutes: number;
 }
+
+export interface YahooOptionsPayload {
+  chain: OptionQuote[];
+  expiries: string[];
+  source: "YAHOO_OPTIONS";
+}

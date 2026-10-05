@@ -1,8 +1,9 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { ApiStatus, useApiData } from "@/lib/useApiData";
+import { YahooOptionsPayload } from "@/types";
 import { Activity, AlertTriangle, CircleOff, Sparkles, Waves } from "lucide-react";
-import { useEffect, useState } from "react";
 
 type QuoteSource = "FINNHUB" | "YAHOO" | "SAMPLE" | "UNAVAILABLE";
 
@@ -13,32 +14,31 @@ const sourceStyles = {
   unavailable: "border-border bg-muted/30 text-muted-foreground",
 };
 
-function quoteLabel(source: QuoteSource | null) {
+function quoteLabel(status: ApiStatus, source: QuoteSource | undefined) {
+  if (status === "loading") return { text: "CHECKING…", style: sourceStyles.unavailable };
+  if (status !== "ready") return { text: "UNAVAILABLE", style: sourceStyles.unavailable };
   if (source === "FINNHUB") return { text: "FINNHUB LIVE", style: sourceStyles.live };
   if (source === "YAHOO") return { text: "YAHOO · DELAYED", style: sourceStyles.delayed };
   if (source === "SAMPLE") return { text: "SAMPLE", style: sourceStyles.sample };
-  if (source === "UNAVAILABLE") return { text: "UNAVAILABLE", style: sourceStyles.unavailable };
-  return { text: "CHECKING…", style: sourceStyles.unavailable };
+  return { text: "UNAVAILABLE", style: sourceStyles.unavailable };
+}
+
+function optionsLabel(status: ApiStatus, source: string | undefined) {
+  if (status === "loading") return { text: "CHECKING…", style: sourceStyles.unavailable };
+  if (status === "ready" && source === "YAHOO_OPTIONS") return { text: "YAHOO · DELAYED", style: sourceStyles.delayed };
+  return { text: "UNAVAILABLE", style: sourceStyles.unavailable };
 }
 
 export function DataSourcePanel({ symbol = "SPY" }: { symbol?: string }) {
-  const [quoteSource, setQuoteSource] = useState<QuoteSource | null>(null);
+  const encoded = symbol.trim() ? encodeURIComponent(symbol.trim()) : null;
+  const quoteState = useApiData<{ source?: QuoteSource }>(encoded && `/api/quote/realtime?symbol=${encoded}`);
+  const optionsState = useApiData<YahooOptionsPayload>(encoded && `/api/market/options?symbol=${encoded}`);
 
-  useEffect(() => {
-    let active = true;
-    fetch(`/api/quote/realtime?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload: { data?: { source?: QuoteSource } }) => {
-        if (active) setQuoteSource(payload.data?.source ?? "UNAVAILABLE");
-      })
-      .catch(() => { if (active) setQuoteSource("UNAVAILABLE"); });
-    return () => { active = false; };
-  }, [symbol]);
-
-  const quote = quoteLabel(quoteSource);
+  const quote = quoteLabel(quoteState.status, quoteState.status === "ready" ? quoteState.data.source : undefined);
+  const options = optionsLabel(optionsState.status, optionsState.status === "ready" ? optionsState.data.source : undefined);
   const sources = [
     { name: "Quotes", value: quote.text, style: quote.style, icon: Activity },
-    { name: "Options", value: "YAHOO · DELAYED", style: sourceStyles.delayed, icon: Waves },
+    { name: "Options", value: options.text, style: options.style, icon: Waves },
     { name: "Flow", value: "SIMULATED", style: sourceStyles.sample, icon: AlertTriangle },
     { name: "Dark Pool", value: "SIMULATED", style: sourceStyles.sample, icon: AlertTriangle },
     { name: "GEX", value: "NOT AVAILABLE", style: sourceStyles.unavailable, icon: CircleOff },

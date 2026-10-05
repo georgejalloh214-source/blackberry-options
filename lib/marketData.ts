@@ -179,6 +179,14 @@ class FinnhubProvider implements MarketDataProvider {
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey", "ripHistorical"] });
 const QUOTE_TTL_MS = 15_000; // pages poll every 10s across several widgets
 const OPTIONS_TTL_MS = 30_000;
+const YAHOO_TIMEOUT_MS = 8_000; // stays under Vercel's default function limit
+
+function withTimeout<T>(promise: Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Yahoo request timed out")), YAHOO_TIMEOUT_MS);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
 const quoteCache = new Map<string, { at: number; quote: StockQuote }>();
 const optionsCache = new Map<string, { at: number; data: YahooOptionsData }>();
 
@@ -198,10 +206,10 @@ export async function fetchYahooOptionsData(symbolRaw: string, expiry?: string):
   const cached = optionsCache.get(cacheKey);
   if (cached && Date.now() - cached.at < OPTIONS_TTL_MS) return cached.data;
 
-  const result = await yahooFinance.options(
+  const result = await withTimeout(yahooFinance.options(
     symbol,
     expiry ? { date: new Date(`${expiry}T00:00:00.000Z`) } : undefined
-  );
+  ));
   const expiries = result.expirationDates.map((date) => date.toISOString().slice(0, 10));
   const chain: OptionQuote[] = [];
 
@@ -245,7 +253,7 @@ export async function fetchYahooQuote(symbolRaw: string): Promise<StockQuote | n
   if (cached && Date.now() - cached.at < QUOTE_TTL_MS) return cached.quote;
 
   try {
-    const q = await yahooFinance.quote(symbol);
+    const q = await withTimeout(yahooFinance.quote(symbol));
     if (typeof q.regularMarketPrice !== "number" || q.regularMarketPrice <= 0) return null;
     const price = round(q.regularMarketPrice);
     const step = strikeStep(price);
