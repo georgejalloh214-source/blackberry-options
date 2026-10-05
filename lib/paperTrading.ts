@@ -44,7 +44,10 @@ export async function openTrade(input: OpenTradeInput): Promise<PaperPosition> {
     );
   }
 
-  const entryPrice = contract.mid; // fill at mid — realistic paper fill
+  const entryPrice = contract.mid ?? contract.lastPrice;
+  if (entryPrice === null || entryPrice <= 0) {
+    throw new Error("Yahoo Finance has no usable bid, ask, or last price for this contract.");
+  }
   const isShort = input.side === "SELL_TO_OPEN";
   const marginRequired = isShort
     ? round(input.optionContract.strike * 100 * input.quantity)
@@ -63,7 +66,7 @@ export async function openTrade(input: OpenTradeInput): Promise<PaperPosition> {
     pnl: 0,
     greeks: contract.greeks,
     marginRequired,
-    assignmentRiskScore: assignmentRisk(contract.greeks.delta, contract.dte, isShort),
+    assignmentRiskScore: contract.greeks ? assignmentRisk(contract.greeks.delta, contract.dte, isShort) : null,
     status: "OPEN",
     openedAt: new Date().toISOString(),
     notes: input.notes,
@@ -111,14 +114,15 @@ async function refreshPosition(pos: PaperPosition): Promise<PaperPosition> {
   if (!contract) return pos;
 
   const isShort = pos.side === "SELL_TO_OPEN";
-  const currentPrice = contract.mid;
+  const currentPrice = contract.mid ?? contract.lastPrice;
+  if (currentPrice === null || currentPrice <= 0) return pos;
   const perContract = isShort ? pos.entryPrice - currentPrice : currentPrice - pos.entryPrice;
   return {
     ...pos,
     currentPrice,
     pnl: round(perContract * 100 * pos.quantity),
     greeks: contract.greeks,
-    assignmentRiskScore: assignmentRisk(contract.greeks.delta, contract.dte, isShort),
+    assignmentRiskScore: contract.greeks ? assignmentRisk(contract.greeks.delta, contract.dte, isShort) : pos.assignmentRiskScore,
   };
 }
 

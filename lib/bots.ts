@@ -90,7 +90,7 @@ async function mockEntryTiming(
     (c) => c.expiry === contract.expiry && c.strike === contract.strike && c.type === contract.type
   );
   let riskScore = 50;
-  if (target) {
+  if (target?.greeks && target.iv !== null) {
     const absDelta = Math.abs(target.greeks.delta);
     riskScore = Math.round(Math.min(100, absDelta * 160 + (target.iv > 0.6 ? 20 : 0)));
     if (absDelta <= 0.35) {
@@ -101,7 +101,7 @@ async function mockEntryTiming(
       reasons.push(`RiskManager: |delta| ${absDelta.toFixed(2)} is aggressive for premium selling.`);
     }
   } else {
-    reasons.push("RiskManager: contract not found in delayed chain — risk unverified.");
+    reasons.push("RiskManager: Yahoo does not provide Greeks for this contract — risk unverified.");
     unfavorable++;
   }
 

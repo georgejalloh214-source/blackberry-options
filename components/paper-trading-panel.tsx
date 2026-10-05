@@ -161,7 +161,7 @@ export function PaperTradingPanel({ refreshKey }: { refreshKey: number }) {
                       ${p.pnl.toFixed(0)}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      {p.greeks.delta.toFixed(2)} / {p.greeks.theta.toFixed(2)}
+                      {p.greeks ? `${p.greeks.delta.toFixed(2)} / ${p.greeks.theta.toFixed(2)}` : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       ${p.marginRequired.toLocaleString()}
@@ -169,14 +169,16 @@ export function PaperTradingPanel({ refreshKey }: { refreshKey: number }) {
                     <TableCell className="text-right">
                       <span
                         className={
-                          p.assignmentRiskScore >= 60
+                          p.assignmentRiskScore === null
+                            ? "text-muted-foreground"
+                            : p.assignmentRiskScore >= 60
                             ? "text-red-400 font-bold"
                             : p.assignmentRiskScore >= 35
                               ? "text-primary font-semibold"
                               : "text-emerald-400"
                         }
                       >
-                        {p.assignmentRiskScore}
+                        {p.assignmentRiskScore ?? "—"}
                       </span>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">

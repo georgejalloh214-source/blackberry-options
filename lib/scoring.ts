@@ -1,4 +1,21 @@
-import { OptionQuote, ScannerResult, ScoreBreakdown, StrategyTag } from "@/types";
+import { Greeks, OptionQuote, ScannerResult, ScoreBreakdown, StrategyTag } from "@/types";
+
+type ScorableOption = OptionQuote & {
+  iv: number;
+  ivPercentile: number;
+  bid: number;
+  ask: number;
+  mid: number;
+  volume: number;
+  openInterest: number;
+  greeks: Greeks;
+};
+
+function isScorableOption(option: OptionQuote): option is ScorableOption {
+  return option.iv !== null && option.ivPercentile !== null && option.bid !== null &&
+    option.ask !== null && option.mid !== null && option.volume !== null &&
+    option.openInterest !== null && option.greeks !== null;
+}
 
 export interface ScannerFilters {
   minDelta: number;
@@ -29,7 +46,7 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.min(hi, Math.max(lo, n));
  * - strike at/below support
  */
 export function scoreContract(
-  q: OptionQuote,
+  q: ScorableOption,
   filters: ScannerFilters,
   supportLevel: number | null,
   resistanceLevel: number | null
@@ -89,7 +106,7 @@ export function scoreContract(
   };
 }
 
-function tagStrategy(q: OptionQuote, supportLevel: number | null): StrategyTag {
+function tagStrategy(q: ScorableOption, supportLevel: number | null): StrategyTag {
   if (q.type === "PUT") {
     if (supportLevel && q.strike <= supportLevel && q.ivPercentile >= 30) return "NAKED_PUT";
     return q.ivPercentile > 70 ? "IRON_CONDOR" : "CREDIT_SPREAD";
@@ -106,6 +123,7 @@ export function scanChain(
   topN = 10
 ): ScannerResult[] {
   return chain
+    .filter(isScorableOption)
     .filter((q) => {
       const absDelta = Math.abs(q.greeks.delta);
       const spreadPct = q.mid > 0 ? (q.ask - q.bid) / q.mid : 1;

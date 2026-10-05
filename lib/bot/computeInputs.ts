@@ -16,16 +16,18 @@ export function computeFlowScore(flow: FlowItem[]): number {
 }
 
 export function computeIVScore(chain: OptionQuote[]): number {
-  if (!chain.length) return 50;
-  const averagePercentile = chain.reduce((sum, contract) => sum + contract.ivPercentile, 0) / chain.length;
+  const percentiles = chain.flatMap((contract) => contract.ivPercentile === null ? [] : [contract.ivPercentile]);
+  if (!percentiles.length) return 50;
+  const averagePercentile = percentiles.reduce((sum, percentile) => sum + percentile, 0) / percentiles.length;
   return clamp(100 - averagePercentile);
 }
 
 export function computeGreeksScore(chain: OptionQuote[]): number {
-  if (!chain.length) return 50;
-  const averageDelta = chain.reduce((sum, contract) => sum + Math.abs(contract.greeks.delta), 0) / chain.length;
-  const averageTheta = chain.reduce((sum, contract) => sum + Math.abs(contract.greeks.theta), 0) / chain.length;
-  const averageGamma = chain.reduce((sum, contract) => sum + contract.greeks.gamma, 0) / chain.length;
+  const greeks = chain.flatMap((contract) => contract.greeks ? [contract.greeks] : []);
+  if (!greeks.length) return 50;
+  const averageDelta = greeks.reduce((sum, item) => sum + Math.abs(item.delta), 0) / greeks.length;
+  const averageTheta = greeks.reduce((sum, item) => sum + Math.abs(item.theta), 0) / greeks.length;
+  const averageGamma = greeks.reduce((sum, item) => sum + item.gamma, 0) / greeks.length;
   const deltaQuality = 100 - Math.min(100, Math.abs(averageDelta - 0.5) * 200);
   const thetaQuality = 100 - Math.min(100, averageTheta * 20);
   const gammaQuality = clamp(50 + averageGamma * 1_000);
@@ -34,7 +36,9 @@ export function computeGreeksScore(chain: OptionQuote[]): number {
 
 export function computeRiskScore(positions: PaperPosition[]): number {
   if (!positions.length) return 80;
-  const averageAssignmentRisk = positions.reduce((sum, position) => sum + position.assignmentRiskScore, 0) / positions.length;
+  const risks = positions.flatMap((position) => position.assignmentRiskScore === null ? [] : [position.assignmentRiskScore]);
+  if (!risks.length) return 50;
+  const averageAssignmentRisk = risks.reduce((sum, risk) => sum + risk, 0) / risks.length;
   return clamp(100 - averageAssignmentRisk);
 }
 

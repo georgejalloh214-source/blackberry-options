@@ -12,10 +12,13 @@ export function selectStrategy(
   contract: OptionQuote | undefined,
   profile: UserProfile
 ): StrategyResult {
-  const ivp = contract?.ivPercentile ?? 50;
-  const mid = contract?.mid ?? 1;
-  const strike = contract?.strike ?? quote.price;
-  const absDelta = Math.abs(contract?.greeks.delta ?? 0.3);
+  if (!contract || !contract.greeks || contract.ivPercentile === null || contract.mid === null) {
+    throw new Error("Yahoo Finance does not provide the Greeks and IV history required for strategy scoring.");
+  }
+  const ivp = contract.ivPercentile;
+  const mid = contract.mid;
+  const strike = contract.strike;
+  const absDelta = Math.abs(contract.greeks.delta);
   const pop = round((1 - absDelta) * 100, 1); // rough POP for short premium
 
   const cspCollateral = strike * 100;
