@@ -5,6 +5,7 @@ import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
 import { BotIntelligence } from "@/components/BotIntelligence";
 import { computeBotInputs } from "@/lib/bot/computeInputs";
 import { DarkPoolTape } from "@/components/DarkPoolTape";
+import { DataSourcePanel } from "@/components/DataSourcePanel";
 import { Disclaimer } from "@/components/disclaimer";
 import { FlowHistory } from "@/components/FlowHistory";
 import { FlowTape } from "@/components/FlowTape";
@@ -92,6 +93,7 @@ export default function SymbolPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <Header asOf={asOf} />
+      <DataSourcePanel symbol={symbol} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6">
           <RealtimeQuoteCard symbol={symbol} />

@@ -2,6 +2,7 @@
 
 import { AutoExitToggle } from "@/components/AutoExitToggle";
 import { Disclaimer } from "@/components/disclaimer";
+import { DataSourcePanel } from "@/components/DataSourcePanel";
 import { Header } from "@/components/header";
 import { PaperAccount } from "@/components/PaperAccount";
 import { PaperTradingPanel } from "@/components/paper-trading-panel";
@@ -15,6 +16,7 @@ export default function PaperTradingPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <Header asOf={null} />
+      <DataSourcePanel symbol="SPY" />
       <PaperAccount refreshKey={refreshKey} />
       <AutoExitToggle onTradeClosed={bump} />
       <PaperTradingPanel refreshKey={refreshKey} />

@@ -41,8 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="border-t border-border pt-4 text-[10px] leading-4 text-muted-foreground">
-          <p className="text-primary">MARKET DATA</p>
-          <p className="mt-1">Delayed 15 min · paper mode</p>
+          <p className="text-primary">MARKET DATA STATUS</p>
+          <p className="mt-1">Live / delayed quotes · Yahoo options · simulated flow</p>
         </div>
       </aside>
       {open && <button type="button" className="fixed inset-0 z-10 bg-background/70 lg:hidden" onClick={() => setOpen(false)} aria-label="Close navigation overlay" />}

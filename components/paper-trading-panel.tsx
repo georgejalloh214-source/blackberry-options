@@ -36,6 +36,8 @@ export function PaperTradingPanel({ refreshKey }: { refreshKey: number }) {
       ]);
       if (posRes.ok && posRes.data) setPositions(posRes.data.positions);
       if (histRes.ok && histRes.data) setHistory(histRes.data.positions);
+    } catch {
+      // Keep the last good positions; the next poll retries.
     } finally {
       setLoading(false);
     }

@@ -2,15 +2,10 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiEnvelope, OptionQuote } from "@/types";
+import { useApiData } from "@/lib/useApiData";
+import { YahooOptionsPayload } from "@/types";
 import { ArrowDownUp, Layers3 } from "lucide-react";
 import { useEffect, useState } from "react";
-
-interface YahooOptionsPayload {
-  chain: OptionQuote[];
-  expiries: string[];
-  source: "YAHOO_OPTIONS";
-}
 
 function price(value: number | null) {
   return value === null ? "—" : `$${value.toFixed(2)}`;
@@ -25,40 +20,22 @@ function volatility(value: number | null) {
 }
 
 export function OptionsChain({ symbol }: { symbol: string }) {
-  const [chain, setChain] = useState<OptionQuote[]>([]);
-  const [expiry, setExpiry] = useState("");
-  const [expiries, setExpiries] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [unavailable, setUnavailable] = useState(false);
+  const [selected, setSelected] = useState<{ symbol: string; expiry: string } | null>(null);
+  const [known, setKnown] = useState<{ symbol: string; expiries: string[] }>({ symbol: "", expiries: [] });
+  const expiry = selected?.symbol === symbol ? selected.expiry : "";
+  const state = useApiData<YahooOptionsPayload>(
+    symbol ? `/api/market/options?symbol=${encodeURIComponent(symbol)}${expiry ? `&expiry=${encodeURIComponent(expiry)}` : ""}` : null
+  );
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setUnavailable(false);
-    fetch(`/api/market/options?symbol=${encodeURIComponent(symbol)}${expiry ? `&expiry=${encodeURIComponent(expiry)}` : ""}`)
-      .then((response) => response.json() as Promise<ApiEnvelope<YahooOptionsPayload>>)
-      .then((payload) => {
-        if (!active) return;
-        if (!payload.ok || !payload.data || payload.data.source !== "YAHOO_OPTIONS" || !payload.data.chain.length) {
-          setChain([]);
-          setExpiries([]);
-          setUnavailable(true);
-          return;
-        }
-        setChain(payload.data.chain);
-        setExpiries(payload.data.expiries);
-        if (!expiry && payload.data.expiries[0]) setExpiry(payload.data.expiries[0]);
-      })
-      .catch(() => {
-        if (active) {
-          setChain([]);
-          setExpiries([]);
-          setUnavailable(true);
-        }
-      })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [symbol, expiry]);
+    if (state.status === "ready") setKnown({ symbol, expiries: state.data.expiries });
+  }, [state, symbol]);
+
+  // Keep the expiration list visible while a different expiry loads.
+  const expiries = state.status === "ready" ? state.data.expiries : known.symbol === symbol ? known.expiries : [];
+  const chain = state.status === "ready" && state.data.source === "YAHOO_OPTIONS" ? state.data.chain : [];
+  const loading = state.status === "loading";
+  const unavailable = !loading && chain.length === 0;
 
   return (
     <Card className="card-3d">
@@ -73,8 +50,8 @@ export function OptionsChain({ symbol }: { symbol: string }) {
             </Badge>
           </div>
           <select
-            value={expiry}
-            onChange={(event) => setExpiry(event.target.value)}
+            value={expiry || expiries[0] || ""}
+            onChange={(event) => setSelected({ symbol, expiry: event.target.value })}
             aria-label="Options expiration"
             className="h-8 rounded-md border border-input bg-background px-2 text-xs"
           >

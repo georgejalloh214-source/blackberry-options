@@ -45,6 +45,7 @@ export function DarkPoolTape({ symbol }: { symbol: string }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-[10px] text-amber-300">Illustrative synthetic prints only. No real dark-pool reports are connected.</p>
         {loading && <Skeleton className="h-24 w-full" />}
 
         {!loading && clusters.length > 0 && (

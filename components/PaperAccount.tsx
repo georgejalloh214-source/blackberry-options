@@ -29,9 +29,13 @@ export function PaperAccount({ refreshKey = 0 }: { refreshKey?: number }) {
   const [stats, setStats] = useState<AccountStats | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/account");
-    const json = (await res.json()) as ApiEnvelope<AccountStats>;
-    if (json.ok && json.data) setStats(json.data);
+    try {
+      const res = await fetch("/api/account");
+      const json = (await res.json()) as ApiEnvelope<AccountStats>;
+      if (json.ok && json.data) setStats(json.data);
+    } catch {
+      // Keep the last good stats; the next poll retries.
+    }
   }, []);
 
   useEffect(() => {
