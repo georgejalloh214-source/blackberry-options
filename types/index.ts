@@ -19,15 +19,16 @@ export interface Greeks {
 
 export interface OptionQuote extends OptionContractRef {
   symbol: string;
-  iv: number; // implied volatility (decimal, e.g. 0.32)
-  ivPercentile: number; // 0-100
-  bid: number;
-  ask: number;
-  mid: number;
-  volume: number;
-  openInterest: number;
+  lastPrice: number | null;
+  iv: number | null; // implied volatility (decimal, e.g. 0.32)
+  ivPercentile: number | null; // Yahoo does not provide historical percentile
+  bid: number | null;
+  ask: number | null;
+  mid: number | null; // derived only from Yahoo bid/ask quotes
+  volume: number | null;
+  openInterest: number | null;
   dte: number; // days to expiry
-  greeks: Greeks;
+  greeks: Greeks | null; // Yahoo's options endpoint does not provide Greeks
 }
 
 export interface ScoreBreakdown {
@@ -45,6 +46,14 @@ export type StrategyTag =
   | "IRON_CONDOR";
 
 export interface ScannerResult extends OptionQuote {
+  iv: number;
+  ivPercentile: number;
+  bid: number;
+  ask: number;
+  mid: number;
+  volume: number;
+  openInterest: number;
+  greeks: Greeks;
   supportLevel: number | null;
   resistanceLevel: number | null;
   score: number; // 0-100
@@ -125,9 +134,9 @@ export interface PaperPosition {
   entryPrice: number;
   currentPrice: number;
   pnl: number;
-  greeks: Greeks;
+  greeks: Greeks | null;
   marginRequired: number;
-  assignmentRiskScore: number; // 0-100
+  assignmentRiskScore: number | null; // 0-100 when Yahoo supplies Greeks
   status: "OPEN" | "CLOSED";
   openedAt: string;
   closedAt?: string;

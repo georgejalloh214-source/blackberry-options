@@ -1,5 +1,15 @@
 import { BotOutput } from "@/lib/bot/brain";
-import { OptionQuote } from "@/types";
+import { Greeks, OptionQuote } from "@/types";
+
+type TradableOption = OptionQuote & {
+  bid: number;
+  ask: number;
+  greeks: Greeks;
+};
+
+function hasTradableMetrics(contract: OptionQuote): contract is TradableOption {
+  return contract.greeks !== null && contract.bid !== null && contract.ask !== null;
+}
 
 export type RecommendedLeg = {
   action: "BUY" | "SELL";
@@ -24,6 +34,7 @@ export function recommendContracts(
   const expiry = [...new Set(chain.map((contract) => contract.expiry))].sort()[0];
   const type = bullish ? "PUT" : "CALL";
   const contracts = chain
+    .filter(hasTradableMetrics)
     .filter((contract) => contract.expiry === expiry && contract.type === type)
     .sort((a, b) => a.strike - b.strike);
   if (contracts.length < 2) return [];
@@ -41,7 +52,7 @@ export function recommendContracts(
   return [leg("SELL", short), leg("BUY", long)];
 }
 
-function leg(action: RecommendedLeg["action"], contract: OptionQuote): RecommendedLeg {
+function leg(action: RecommendedLeg["action"], contract: TradableOption): RecommendedLeg {
   return {
     action,
     type: contract.type,

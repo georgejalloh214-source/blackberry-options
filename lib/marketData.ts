@@ -1,5 +1,5 @@
 import YahooFinance from "yahoo-finance2";
-import { blackScholes, round } from "@/lib/blackScholes";
+import { round } from "@/lib/blackScholes";
 import { fetchFinnhubQuote, finnhubKey } from "@/lib/finnhub";
 import { rngFor } from "@/lib/flow/seeded";
 import { FlowItem, OptionQuote, OptionType, StockQuote } from "@/types";
@@ -18,7 +18,7 @@ export const DATA_DELAY_MINUTES = 15;
 
 export interface MarketDataProvider {
   getQuote(symbol: string): Promise<StockQuote>;
-  getOptionsChain(symbol: string): Promise<OptionQuote[]>;
+  getOptionsChain(symbol: string, expiry?: string): Promise<OptionQuote[]>;
   getFlow(symbol?: string): Promise<FlowItem[]>;
 }
 
@@ -64,61 +64,6 @@ function strikeStep(price: number): number {
   if (price < 100) return 2.5;
   if (price < 250) return 5;
   return 10;
-}
-
-/** Black-Scholes-modeled chain anchored to a (real or sample) quote. */
-function buildChain(symbol: string, quote: StockQuote): OptionQuote[] {
-  const rnd = rngFor(`c:${symbol}:${hourBucket()}`);
-  const spot = quote.price;
-  const step = strikeStep(spot);
-  const expiries = nextFridays(4);
-  const baseIv = 0.22 + rnd() * 0.35;
-  const ivPercentile = Math.floor(rnd() * 100);
-  const chain: OptionQuote[] = [];
-
-  for (const expiry of expiries) {
-    const dte = Math.max(
-      1,
-      Math.round((new Date(expiry).getTime() - Date.now()) / 86_400_000)
-    );
-    const t = dte / 365;
-    const atm = Math.round(spot / step) * step;
-    for (let i = -7; i <= 7; i++) {
-      const strike = round(atm + i * step);
-      if (strike <= 0) continue;
-      const moneyness = Math.abs(strike - spot) / spot;
-      for (const type of ["PUT", "CALL"] as OptionType[]) {
-        const skew = type === "PUT" && strike < spot ? 0.03 : 0;
-        const iv = round(baseIv + moneyness * 0.5 + skew + rnd() * 0.02, 3);
-        const bs = blackScholes({ spot, strike, t, iv, type });
-        const spreadPct = 0.02 + moneyness * 0.25 + rnd() * 0.04;
-        const half = Math.max(0.01, (bs.price * spreadPct) / 2);
-        const liquidityFactor = Math.max(0, 1 - moneyness * 6);
-        chain.push({
-          symbol,
-          expiry,
-          strike,
-          type,
-          iv,
-          ivPercentile,
-          bid: round(Math.max(0.01, bs.price - half)),
-          ask: round(bs.price + half),
-          mid: round(bs.price),
-          volume: Math.floor(rnd() * 8000 * liquidityFactor),
-          openInterest: Math.floor(rnd() * 25000 * liquidityFactor),
-          dte,
-          greeks: {
-            delta: bs.delta,
-            gamma: bs.gamma,
-            theta: bs.theta,
-            vega: bs.vega,
-            rho: bs.rho,
-          },
-        });
-      }
-    }
-  }
-  return chain;
 }
 
 /** Sample flow used in both modes until a real flow feed exists. */
@@ -185,9 +130,8 @@ class SampleProvider implements MarketDataProvider {
     };
   }
 
-  async getOptionsChain(symbolRaw: string): Promise<OptionQuote[]> {
-    const symbol = symbolRaw.toUpperCase();
-    return buildChain(symbol, await this.getQuote(symbol));
+  async getOptionsChain(symbolRaw: string, expiry?: string): Promise<OptionQuote[]> {
+    return (await fetchYahooOptionsData(symbolRaw, expiry)).chain;
   }
 
   async getFlow(symbol?: string): Promise<FlowItem[]> {
@@ -221,10 +165,8 @@ class FinnhubProvider implements MarketDataProvider {
     };
   }
 
-  async getOptionsChain(symbolRaw: string): Promise<OptionQuote[]> {
-    const symbol = symbolRaw.toUpperCase();
-    // Chain is MODELED around the real spot — free tier has no options data.
-    return buildChain(symbol, await this.getQuote(symbol));
+  async getOptionsChain(symbolRaw: string, expiry?: string): Promise<OptionQuote[]> {
+    return (await fetchYahooOptionsData(symbolRaw, expiry)).chain;
   }
 
   async getFlow(symbol?: string): Promise<FlowItem[]> {
@@ -236,7 +178,65 @@ class FinnhubProvider implements MarketDataProvider {
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey", "ripHistorical"] });
 const QUOTE_TTL_MS = 15_000; // pages poll every 10s across several widgets
+const OPTIONS_TTL_MS = 30_000;
 const quoteCache = new Map<string, { at: number; quote: StockQuote }>();
+const optionsCache = new Map<string, { at: number; data: YahooOptionsData }>();
+
+export interface YahooOptionsData {
+  chain: OptionQuote[];
+  expiries: string[];
+}
+
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export async function fetchYahooOptionsData(symbolRaw: string, expiry?: string): Promise<YahooOptionsData> {
+  const symbol = symbolRaw.trim().toUpperCase();
+  if (!/^[A-Z0-9.^=-]{1,20}$/.test(symbol)) throw new Error("Invalid ticker symbol.");
+  const cacheKey = `${symbol}:${expiry ?? "nearest"}`;
+  const cached = optionsCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < OPTIONS_TTL_MS) return cached.data;
+
+  const result = await yahooFinance.options(
+    symbol,
+    expiry ? { date: new Date(`${expiry}T00:00:00.000Z`) } : undefined
+  );
+  const expiries = result.expirationDates.map((date) => date.toISOString().slice(0, 10));
+  const chain: OptionQuote[] = [];
+
+  for (const expiration of result.options) {
+    const expiryDate = expiration.expirationDate.toISOString().slice(0, 10);
+    const dte = Math.max(0, Math.ceil((expiration.expirationDate.getTime() - Date.now()) / 86_400_000));
+    for (const [type, contracts] of [["CALL", expiration.calls], ["PUT", expiration.puts]] as const) {
+      for (const contract of contracts) {
+        const bid = nullableNumber(contract.bid);
+        const ask = nullableNumber(contract.ask);
+        chain.push({
+          symbol,
+          expiry: expiryDate,
+          strike: contract.strike,
+          type,
+          lastPrice: nullableNumber(contract.lastPrice),
+          iv: nullableNumber(contract.impliedVolatility),
+          ivPercentile: null,
+          bid,
+          ask,
+          mid: null,
+          volume: nullableNumber(contract.volume),
+          openInterest: nullableNumber(contract.openInterest),
+          dte,
+          greeks: null,
+        });
+      }
+    }
+  }
+
+  if (!chain.length) throw new Error("DATA UNAVAILABLE");
+  const data = { chain, expiries };
+  optionsCache.set(cacheKey, { at: Date.now(), data });
+  return data;
+}
 
 /** Live (delayed) Yahoo quote, cached briefly; null when Yahoo has no usable price. */
 export async function fetchYahooQuote(symbolRaw: string): Promise<StockQuote | null> {
@@ -278,9 +278,8 @@ class YahooProvider implements MarketDataProvider {
     return (await fetchYahooQuote(symbol)) ?? this.fallback.getQuote(symbol);
   }
 
-  async getOptionsChain(symbolRaw: string): Promise<OptionQuote[]> {
-    const symbol = symbolRaw.toUpperCase();
-    return buildChain(symbol, await this.getQuote(symbol));
+  async getOptionsChain(symbolRaw: string, expiry?: string): Promise<OptionQuote[]> {
+    return (await fetchYahooOptionsData(symbolRaw, expiry)).chain;
   }
 
   async getFlow(symbol?: string): Promise<FlowItem[]> {

@@ -57,7 +57,7 @@ export async function runAutoExitSweep(): Promise<AutoExitEvent[]> {
     } else if (isShort && p.pnl < 0 && Math.abs(p.pnl) >= cfg.stopLossMultiple * premium) {
       reason = "STOP_LOSS";
       detail = `Loss ${p.pnl.toFixed(0)} exceeded ${cfg.stopLossMultiple}x premium collected.`;
-    } else if (isShort && Math.abs(p.greeks.delta) >= cfg.maxAbsDelta) {
+    } else if (isShort && p.greeks && Math.abs(p.greeks.delta) >= cfg.maxAbsDelta) {
       reason = "DELTA_RISK";
       detail = `|delta| ${Math.abs(p.greeks.delta).toFixed(2)} >= ${cfg.maxAbsDelta} — assignment risk too high.`;
     } else if (dte <= cfg.exitDTE) {
@@ -85,7 +85,9 @@ export async function runAutoExitSweep(): Promise<AutoExitEvent[]> {
 
     if (reason) {
       const closed = await closeTrade(p.id);
-      const riskLevel = Math.max(0, Math.min(100, 100 - p.assignmentRiskScore));
+      const riskLevel = p.assignmentRiskScore === null
+        ? undefined
+        : Math.max(0, Math.min(100, 100 - p.assignmentRiskScore));
       fired.push({
         id: crypto.randomUUID(),
         positionId: p.id,
@@ -96,7 +98,7 @@ export async function runAutoExitSweep(): Promise<AutoExitEvent[]> {
         pnl: closed.realizedPnl ?? 0,
         at: new Date().toISOString(),
         pnlPct: Number(pnlPctOfMax.toFixed(2)),
-        riskLevel,
+        ...(riskLevel === undefined ? {} : { riskLevel }),
         source: "AUTO_EXIT",
       });
     }
